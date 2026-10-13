@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>QQ飞车 3D · 霓虹十一城（同人还原）</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="speedlines"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="topleft">
+    <div class="row"><span class="lbl">LAP</span><b id="lap">1/3</b></div>
+    <div class="row"><span class="lbl">TIME</span><b id="time">00:00.00</b></div>
+    <div class="row small"><span class="lbl">本圈</span><span id="laptime">00:00.00</span><span class="lbl">最佳</span><span id="best">--:--.--</span></div>
+  </div>
+  <div id="rank"><b id="rankNum">1</b><span id="rankTot">/4</span></div>
+  <div id="ranklist"></div>
+  <canvas id="minimap" width="220" height="220"></canvas>
+
+  <div id="nitroWrap">
+    <div id="slots"><i></i><i></i></div>
+    <div id="nitroBar"><div id="nitroFill"></div></div>
+    <div class="lbl">N₂O 氮气 · Ctrl / 空格</div>
+  </div>
+
+  <div id="speedo">
+    <svg viewBox="0 0 200 200">
+      <circle class="bg" cx="100" cy="100" r="80"/>
+      <circle id="speedArc" cx="100" cy="100" r="80"/>
+    </svg>
+    <div id="speedNum">0</div><div class="unit">km/h</div>
+  </div>
+
+  <div id="popups"></div>
+  <div id="center"></div>
+  <div id="warn"></div>
+  <div id="keyhint">↑↓←→ / WASD 行驶 · Shift 漂移 · Ctrl/空格 氮气 · R 复位 · C 视角 · M 声音 · Esc 暂停</div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <h1>QQ飞车 <span>3D</span></h1>
+    <h2>霓虹十一城 · 同人还原版</h2>
+    <div class="opt">
+      <span class="lbl">赛车涂装</span>
+      <div id="colors">
+        <button data-c="#ff2b6a" class="sel" style="background:#ff2b6a"></button>
+        <button data-c="#1fa2ff" style="background:#1fa2ff"></button>
+        <button data-c="#ffd21f" style="background:#ffd21f"></button>
+        <button data-c="#8a3bff" style="background:#8a3bff"></button>
+        <button data-c="#f5f7fa" style="background:#f5f7fa"></button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="lbl">圈数</span>
+      <div id="laps"><button data-l="1">1</button><button data-l="3" class="sel">3</button><button data-l="5">5</button></div>
+    </div>
+    <table class="keys">
+      <tr><td><kbd>↑</kbd><kbd>W</kbd></td><td>加速 / 小喷 / 双喷 / 落地喷</td></tr>
+      <tr><td><kbd>↓</kbd><kbd>S</kbd></td><td>刹车 / 倒车</td></tr>
+      <tr><td><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd></td><td>转向</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>漂移（方向键 + Shift），漂移攒氮气</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>空格</kbd></td><td>释放氮气（最多存 2 个）</td></tr>
+      <tr><td><kbd>R</kbd> <kbd>C</kbd> <kbd>M</kbd> <kbd>Esc</kbd></td><td>复位 · 切换视角 · 声音 · 暂停</td></tr>
+    </table>
+    <div class="tips">
+      <b>技巧：</b>
+      <p><em>漂移</em>：按住方向键再按 Shift，松开 Shift 并回正方向即结束漂移。</p>
+      <p><em>小喷</em>：漂移结束瞬间（0.45 秒内）<u>重新按下 ↑</u>。漂移时先松开 ↑。</p>
+      <p><em>双喷</em>：小喷后马上再按一次 ↑。</p>
+      <p><em>落地喷</em>：飞跃台起飞，落地瞬间按 ↑。</p>
+      <p><em>起步加速</em>：倒计时出现 GO 的瞬间按 ↑。</p>
+      <p class="mac">Mac 用户提示：Ctrl+方向键会被系统切换桌面占用，放氮气请用空格。</p>
+    </div>
+    <button id="startBtn">开始比赛</button>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="panel small"><h2>已暂停</h2>
+    <button id="resumeBtn">继续比赛</button><button id="restartBtn" class="ghost">重新开始</button><button id="menuBtn" class="ghost">返回菜单</button>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="panel small"><h2 id="resTitle">比赛结束</h2><table id="resTable"></table>
+    <button id="againBtn">再来一局 (Enter)</button><button id="backBtn" class="ghost">返回菜单</button>
+  </div>
+</div>
+
+<div id="touch" class="hidden">
+  <div class="tl"><button data-k="left">◀</button><button data-k="right">▶</button></div>
+  <div class="tr"><button data-k="drift">漂移</button><button data-k="nitro">氮气</button><button data-k="up">油门</button><button data-k="down">刹车</button></div>
+</div>
+
+<div id="loading">赛道加载中…</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
